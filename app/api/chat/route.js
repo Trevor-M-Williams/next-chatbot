@@ -27,7 +27,7 @@ export async function POST(request) {
       message: assistantResponse,
     });
   } catch (error) {
-    console.error("Error 1");
+    console.error(error);
     return Response.json({
       message: "Error 1",
     });
@@ -40,7 +40,6 @@ async function handleInput(context) {
     model: "text-embedding-ada-002",
     input: lastUserMessage,
   });
-
   const queryEmbedding = response.data.data[0].embedding;
 
   const index = await client.Index("your-pinecone-index-name");
@@ -52,12 +51,44 @@ async function handleInput(context) {
   };
   let queryResponse = await index.query({ queryRequest });
 
+  queryResponse.matches.forEach((match) => {
+    console.log(match.score);
+  });
+
   const relevantMatches = queryResponse.matches.filter(
     (match) => match.score > 0.8
   );
 
   if (relevantMatches.length === 0) {
-    return "Sorry, I haven't covered that in any of my videos.";
+    // const messages = [
+    //   {
+    //     role: "system",
+    //     content:
+    //       "Determine if the user's input is relevant to AI. If yes return 'Yes.' If no return 'No.' Do not include anything else in the response.",
+    //   },
+    //   ...context.slice(-1),
+    // ];
+
+    // try {
+    //   const completion = await openai.createChatCompletion({
+    //     model: "gpt-3.5-turbo",
+    //     messages,
+    //   });
+
+    //   const response = completion.data.choices[0].message.content;
+    //   console.log(response);
+    //   const promptIsRelevant = response.includes("Yes");
+
+    //   if (!promptIsRelevant) {
+    //     return "Sorry, I am only trained to answer questions about the contents of AI Explained. Do you have any questions about that?";
+    //   }
+    //   return "Nice job! Super relevant!";
+    // } catch (error) {
+    //   console.error(`Error 2`);
+    //   return "Error 2";
+    // }
+
+    return "Sorry, I am only trained to answer questions about the contents of AI Explained. Do you have any questions about that?";
   }
 
   const pineconeContext = relevantMatches
@@ -69,10 +100,7 @@ async function handleInput(context) {
       role: "system",
       content: pineconeContext,
     },
-    {
-      role: "user",
-      content: lastUserMessage,
-    },
+    ...context.slice(-5),
   ];
 
   try {
@@ -83,6 +111,7 @@ async function handleInput(context) {
 
     return completion.data.choices[0].message.content;
   } catch (error) {
-    console.error(`Error 2`);
+    console.error(`Error 3`);
+    return "Error 3";
   }
 }

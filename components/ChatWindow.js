@@ -5,7 +5,7 @@ function ChatWindow() {
     {
       role: "assistant",
       content:
-        "Hello! I am a chatbot trained on the Youtube channel AI-Explained. I can answer any questions you have about the channel's content.",
+        "Hello! I am a chatbot trained on the Youtube channel AI Explained. I can answer any questions you have about the channel's content.",
     },
   ]);
   const [userInput, setUserInput] = useState("");
