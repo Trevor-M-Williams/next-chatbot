@@ -42,7 +42,7 @@ async function handleInput(context) {
   });
   const queryEmbedding = response.data.data[0].embedding;
 
-  const index = await client.Index("your-pinecone-index-name");
+  const index = await client.Index("ai-explained-transcripts");
   const queryRequest = {
     topK: 10,
     vector: queryEmbedding,
@@ -51,44 +51,32 @@ async function handleInput(context) {
   };
   let queryResponse = await index.query({ queryRequest });
 
-  queryResponse.matches.forEach((match) => {
-    console.log(match.score);
-  });
-
   const relevantMatches = queryResponse.matches.filter(
-    (match) => match.score > 0.8
+    (match) => match.score > 0.7
   );
 
   if (relevantMatches.length === 0) {
-    // const messages = [
-    //   {
-    //     role: "system",
-    //     content:
-    //       "Determine if the user's input is relevant to AI. If yes return 'Yes.' If no return 'No.' Do not include anything else in the response.",
-    //   },
-    //   ...context.slice(-1),
-    // ];
+    console.log("No relevant matches found.");
+    const messages = [
+      {
+        role: "system",
+        content: `You are Matt D'Avella, a documentary filmmaker, entrepreneur and YouTuber. You also teach courses on everything from filmmaking to habit change. You like to nerd out about self-development.`,
+      },
+      ...context.slice(-3),
+    ];
 
-    // try {
-    //   const completion = await openai.createChatCompletion({
-    //     model: "gpt-3.5-turbo",
-    //     messages,
-    //   });
+    try {
+      const completion = await openai.createChatCompletion({
+        model: "gpt-3.5-turbo",
+        messages,
+      });
 
-    //   const response = completion.data.choices[0].message.content;
-    //   console.log(response);
-    //   const promptIsRelevant = response.includes("Yes");
-
-    //   if (!promptIsRelevant) {
-    //     return "Sorry, I am only trained to answer questions about the contents of AI Explained. Do you have any questions about that?";
-    //   }
-    //   return "Nice job! Super relevant!";
-    // } catch (error) {
-    //   console.error(`Error 2`);
-    //   return "Error 2";
-    // }
-
-    return "Sorry, I am only trained to answer questions about the contents of AI Explained. Do you have any questions about that?";
+      const response = completion.data.choices[0].message.content;
+      return response;
+    } catch (error) {
+      console.error(error);
+      return "Error 2";
+    }
   }
 
   const pineconeContext = relevantMatches
@@ -98,9 +86,9 @@ async function handleInput(context) {
   const messages = [
     {
       role: "system",
-      content: pineconeContext,
+      content: `You are Matt D'Avella, a documentary filmmaker, entrepreneur and YouTuber. You also teach courses on everything from filmmaking to habit change. You like to nerd out about self-development. Use the following context to answer the user's question. Do not add anything just rearrange the most relevant information. Context: ${pineconeContext}`,
     },
-    ...context.slice(-5),
+    ...context.slice(-1),
   ];
 
   try {
@@ -109,9 +97,10 @@ async function handleInput(context) {
       messages,
     });
 
-    return completion.data.choices[0].message.content;
+    const response = completion.data.choices[0].message.content;
+    return response;
   } catch (error) {
-    console.error(`Error 3`);
+    console.error(error);
     return "Error 3";
   }
 }
